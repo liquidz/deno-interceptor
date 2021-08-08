@@ -1,0 +1,17 @@
+= deno-interceptor
+
+//image:https://img.shields.io/badge/deno.land-deno__interceptor-blue?logo=deno["deno.land", link="https://deno.land/x/deno_interceptor"]
+image:https://github.com/liquidz/deno-interceptor/actions/workflows/test.yml/badge.svg["GitHub Actions for test workflow", link="https://github.com/liquidz/deno-interceptor/actions/workflows/test.yml"]
+
+http://pedestal.io/guides/what-is-an-interceptor[Interceptor] implementation for https://deno.land[Deno].
+
+== Usage
+
+TODO
+
+== License
+
+Copyright (c) 2021 http://twitter.com/uochan[Masashi Iizuka]
+
+Distributed under the MIT License.
+
