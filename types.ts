@@ -1,10 +1,23 @@
 export type Handler<T> = (req: T) => Promise<T | Error>;
 
-export type ExecutionError<T> = {
-  stage: Stage;
-  interceptor?: Interceptor<T>;
-  error: Error;
-};
+export class ExecutionError<T> extends Error {
+  readonly stage: Stage;
+  readonly interceptor: Interceptor<T> | undefined;
+  constructor(
+    { error, stage, interceptor }: {
+      error: Error;
+      stage: Stage;
+      interceptor?: Interceptor<T>;
+    },
+  ) {
+    super(error.message);
+    this.name = error.name;
+    this.stack = error.stack;
+
+    this.stage = stage;
+    this.interceptor = interceptor;
+  }
+}
 
 export interface Context<T> {
   queue: Queue<T>;

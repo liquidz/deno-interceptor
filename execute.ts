@@ -1,12 +1,18 @@
-import { Context, Handler, Interceptor, Queue } from "./types.ts";
+import {
+  Context,
+  ExecutionError,
+  Handler,
+  Interceptor,
+  Queue,
+} from "./types.ts";
 
 function setResult<T>(ctx: Context<T>, resp: T | Error): Context<T> {
   const newContext = ctx;
   if (resp instanceof Error) {
-    newContext.error = {
+    newContext.error = new ExecutionError({
       stage: "handler",
       error: resp,
-    };
+    });
   } else {
     newContext.response = resp;
   }
@@ -40,11 +46,11 @@ async function enter<T>(ctx: Context<T>): Promise<Context<T>> {
       nextContext = await enterFn(nextContext);
     } catch (err) {
       const e = (err instanceof Error) ? err : Error(`Error ${err}`);
-      nextContext.error = {
+      nextContext.error = new ExecutionError({
         stage: "enter",
         interceptor: interceptor,
         error: e,
-      };
+      });
     }
   }
   return nextContext;
@@ -73,11 +79,11 @@ async function leave<T>(ctx: Context<T>): Promise<Context<T>> {
       nextContext = await leaveFn(nextContext);
     } catch (err) {
       const e = (err instanceof Error) ? err : Error(`Error ${err}`);
-      nextContext.error = {
+      nextContext.error = new ExecutionError({
         stage: "leave",
         interceptor: interceptor,
         error: e,
-      };
+      });
     }
   }
   return nextContext;

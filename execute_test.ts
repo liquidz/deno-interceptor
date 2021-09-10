@@ -1,7 +1,6 @@
 import { asserts } from "./test_deps.ts";
 import * as sut from "./execute.ts";
 import { Context, ExecutionError } from "./types.ts";
-import { isExecutionError } from "./error.ts";
 
 type NumParam = Record<string, number>;
 
@@ -47,7 +46,7 @@ Deno.test("execute", async () => {
     dummyHandler,
   ], { x: 10 });
 
-  asserts.assert(!isExecutionError(res));
+  asserts.assert(!(res instanceof ExecutionError));
   asserts.assertEquals(res, { y: 52 });
 });
 
@@ -74,10 +73,10 @@ Deno.test("error", async () => {
     x: 10,
   }).catch((err) => err);
 
-  asserts.assert(isExecutionError(res));
+  asserts.assert(res instanceof ExecutionError);
+  asserts.assertEquals(res.message, "dummy error");
   asserts.assertEquals(res.stage, "enter");
   asserts.assertEquals(res.interceptor, failureInterceptor);
-  asserts.assertEquals(res.error.message, "dummy error");
 });
 
 Deno.test("interceptor error function", async () => {
@@ -106,7 +105,7 @@ Deno.test("interceptor error function", async () => {
     error: (ctx: Context<NumParam>, e: ExecutionError<NumParam>) => {
       if (ctx.response == null) return Promise.resolve(ctx);
       ctx.response["should_be_executed"] = (e.stage === "leave")
-        ? e.error.message.length
+        ? e.message.length
         : -1;
       return Promise.resolve(ctx);
     },
@@ -130,6 +129,6 @@ Deno.test("interceptor error function", async () => {
     dummyHandler,
   ], { x: 10 });
 
-  asserts.assert(!isExecutionError(res));
+  asserts.assert(!(res instanceof ExecutionError));
   asserts.assertEquals(res, { y: 15, should_be_executed: 40 });
 });
