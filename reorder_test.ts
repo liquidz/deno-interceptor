@@ -59,3 +59,31 @@ Deno.test("no requires", () => {
   const res = sut.reorder(dummyQueue);
   asserts.assertEquals(res.map((i) => i.name), ["aaa", "bbb", "ccc"]);
 });
+
+Deno.test("require others", () => {
+  const dummyQueue: Queue<number> = [
+    {
+      name: "ccc",
+      requireOthers: true,
+      enter: (c: Context<number>) => {
+        return Promise.resolve(c);
+      },
+    },
+    {
+      name: "bbb",
+      requires: ["aaa"],
+      enter: (c: Context<number>) => {
+        return Promise.resolve(c);
+      },
+    },
+    {
+      name: "aaa",
+      enter: (c: Context<number>) => {
+        return Promise.resolve(c);
+      },
+    },
+  ];
+
+  const res = sut.reorder(dummyQueue);
+  asserts.assertEquals(res.map((i) => i.name), ["aaa", "bbb", "ccc"]);
+});

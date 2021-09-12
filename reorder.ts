@@ -15,7 +15,14 @@ export function reorder<T>(queue: Queue<T>): Queue<T> {
   const graph = new KahnGraph();
   for (const id in idToInterceptor) {
     const interceptor = idToInterceptor[id];
-    if (interceptor.requires != null) {
+
+    if (interceptor.requireOthers) {
+      for (const i of queue) {
+        const fromId = nameToId[i.name];
+        if (fromId == null || fromId === id) continue;
+        graph.addEdge({ id: fromId }, { id: id });
+      }
+    } else if (interceptor.requires != null) {
       for (const name of interceptor.requires) {
         const fromId = nameToId[name];
         if (fromId == null) continue;

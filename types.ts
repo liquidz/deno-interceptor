@@ -29,6 +29,7 @@ export interface Context<T> {
 export interface Interceptor<T> {
   name: string;
   requires?: string[];
+  requireOthers?: boolean;
   enter?: (ctx: Context<T>) => Promise<Context<T>>;
   leave?: (ctx: Context<T>) => Promise<Context<T>>;
   error?: (ctx: Context<T>, e: ExecutionError<T>) => Promise<Context<T>>;
