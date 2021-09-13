@@ -1,10 +1,13 @@
-import { Interceptor, Queue } from "./types.ts";
+import { Interceptor } from "./types.ts";
 import { KahnGraph } from "./deps.ts";
 
-export function reorder<T>(queue: Queue<T>): Queue<T> {
-  const idToInterceptor: Record<string, Interceptor<T>> = {};
-  for (let i = 0; i < queue.length; ++i) {
-    idToInterceptor[i.toString()] = queue[i];
+//deno-lint-ignore no-explicit-any
+export function reorder<T extends Interceptor<any>>(
+  interceptors: Array<T>,
+): Array<T> {
+  const idToInterceptor: Record<string, T> = {};
+  for (let i = 0; i < interceptors.length; ++i) {
+    idToInterceptor[i.toString()] = interceptors[i];
   }
 
   const nameToId: Record<string, string> = {};
@@ -17,7 +20,7 @@ export function reorder<T>(queue: Queue<T>): Queue<T> {
     const interceptor = idToInterceptor[id];
 
     if (interceptor.requireOthers) {
-      for (const i of queue) {
+      for (const i of interceptors) {
         const fromId = nameToId[i.name];
         if (fromId == null || fromId === id) continue;
         graph.addEdge({ id: fromId }, { id: id });
