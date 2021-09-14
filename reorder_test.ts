@@ -60,6 +60,34 @@ Deno.test("no requires", () => {
   asserts.assertEquals(res.map((i) => i.name), ["aaa", "bbb", "ccc"]);
 });
 
+Deno.test("empty requires", () => {
+  const dummyQueue: Queue<number> = [
+    {
+      name: "aaa",
+      requires: [],
+      enter: (c: Context<number>) => {
+        return Promise.resolve(c);
+      },
+    },
+    {
+      name: "bbb",
+      requires: [],
+      enter: (c: Context<number>) => {
+        return Promise.resolve(c);
+      },
+    },
+    {
+      name: "ccc",
+      requires: [],
+      enter: (c: Context<number>) => {
+        return Promise.resolve(c);
+      },
+    },
+  ];
+  const res = sut.reorder(dummyQueue);
+  asserts.assertEquals(res.map((i) => i.name), ["aaa", "bbb", "ccc"]);
+});
+
 Deno.test("require others", () => {
   const dummyQueue: Queue<number> = [
     {
@@ -87,3 +115,21 @@ Deno.test("require others", () => {
   const res = sut.reorder(dummyQueue);
   asserts.assertEquals(res.map((i) => i.name), ["aaa", "bbb", "ccc"]);
 });
+
+// class Foo implements Interceptor<number> {
+//   name: string;
+//   requires?: string[];
+//
+//   constructor(name: string, req: string[]) {
+//     this.name = name;
+//     this.requires = req;
+//   }
+// }
+//
+// console.log(
+//   sut.reorder<Foo>([
+//     new Foo("c", ["b"]),
+//     new Foo("a", []),
+//     new Foo("b", ["a"]),
+//   ]),
+// );

@@ -25,7 +25,9 @@ export function reorder<T extends Interceptor<any>>(
         if (fromId == null || fromId === id) continue;
         graph.addEdge({ id: fromId }, { id: id });
       }
-    } else if (interceptor.requires != null) {
+    } else if (
+      interceptor.requires != null && interceptor.requires.length > 0
+    ) {
       for (const name of interceptor.requires) {
         const fromId = nameToId[name];
         if (fromId == null) continue;
