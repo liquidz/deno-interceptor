@@ -1,4 +1,11 @@
 export type Handler<T> = (req: T) => Promise<T | Error>;
+export class NotDirectedAcyclicGraphError extends Error {
+  constructor(vertexes: Set<string>) {
+    super(
+      `Not a directed acyclic graph at [${Array.from(vertexes).join(", ")}].`,
+    );
+  }
+}
 
 export class ExecutionError<T> extends Error {
   readonly stage: Stage;
