@@ -2,133 +2,121 @@ import { asserts } from "./test_deps.ts";
 import * as sut from "./execute.ts";
 import { Context, ExecutionError } from "./types.ts";
 
-type NumParam = Record<string, number>;
+type TestContext = Context<number>;
 
-const dummyHandler = (req: NumParam) => {
-  const num = req["x"] || 0;
-  return { y: num + 5 };
+const plusInterceptor = {
+  name: "plus",
+  enter: (ctx: TestContext) => {
+    ctx.param += 1;
+    return Promise.resolve(ctx);
+  },
+  leave: (ctx: TestContext) => {
+    ctx.param += 10;
+    return Promise.resolve(ctx);
+  },
+};
+
+const multiInterceptor = {
+  name: "multi",
+  enter: (ctx: TestContext) => {
+    ctx.param = ctx.param * 2;
+    return Promise.resolve(ctx);
+  },
+  leave: (ctx: TestContext) => {
+    ctx.param = ctx.param * 20;
+    return Promise.resolve(ctx);
+  },
+};
+
+const failInterceptor = {
+  name: "failure",
+  enter: (_ctx: TestContext) => {
+    throw Error("dummy error");
+  },
+};
+
+const rejectInterceptor = {
+  name: "failure",
+  leave: (_ctx: TestContext) => {
+    return Promise.reject(Error("dummy reject"));
+  },
+};
+
+const terminateInterceptor = {
+  name: "terminate",
+  enter: (ctx: TestContext) => {
+    ctx.param = 10000;
+    return Promise.resolve(sut.terminate(ctx));
+  },
+};
+
+const errorHandlingInterceptor = {
+  name: "error handling",
+  leave: (_ctx: TestContext) => {
+    throw Error("should not be called");
+  },
+  error: (ctx: TestContext, e: ExecutionError<number>) => {
+    ctx.param = (e.stage === "enter") ? e.message.length : -1;
+    return Promise.resolve(ctx);
+  },
 };
 
 Deno.test("execute", async () => {
-  const firstInterceptor = {
-    name: "first",
-    enter: (ctx: Context<NumParam>) => {
-      const num = ctx.request["x"] || 0;
-      ctx.request["x"] = num + 1;
-      return Promise.resolve(ctx);
-    },
-    leave: (ctx: Context<NumParam>) => {
-      if (ctx.response == null) return Promise.resolve(ctx);
-      const num = ctx.response["y"] || 0;
-      ctx.response["y"] = num * 2;
-      return Promise.resolve(ctx);
-    },
-  };
-
-  const secondInterceptor = {
-    name: "second",
-    enter: (ctx: Context<NumParam>) => {
-      const num = ctx.request["x"] || 0;
-      ctx.request["x"] = num * 2;
-      return Promise.resolve(ctx);
-    },
-    leave: (ctx: Context<NumParam>) => {
-      if (ctx.response == null) return Promise.resolve(ctx);
-      const num = ctx.response["y"] || 0;
-      ctx.response["y"] = num - 1;
-      return Promise.resolve(ctx);
-    },
-  };
-
-  const res = await sut.execute<NumParam>([
-    firstInterceptor,
-    secondInterceptor,
-    dummyHandler,
-  ], { x: 10 });
+  const res = await sut.execute<number>([
+    plusInterceptor,
+    multiInterceptor,
+  ], 1).catch((err) => err);
 
   asserts.assert(!(res instanceof ExecutionError));
-  asserts.assertEquals(res, { y: 52 });
+  asserts.assertEquals(res, 90);
 });
 
-Deno.test("error", async () => {
-  const successInterceptor = {
-    name: "success",
-    enter: (ctx: Context<NumParam>) => {
-      ctx.request["x"] = (ctx.request["x"] || 0) + 1;
-      return Promise.resolve(ctx);
-    },
-  };
-
-  const failureInterceptor = {
-    name: "failure",
-    enter: (_ctx: Context<NumParam>) => {
-      throw Error("dummy error");
-    },
-  };
-
-  const res = await sut.execute<NumParam>([
-    successInterceptor,
-    failureInterceptor,
-  ], {
-    x: 10,
-  }).catch((err) => err);
+Deno.test("execute error", async () => {
+  const res = await sut.execute<number>([
+    plusInterceptor,
+    failInterceptor,
+    multiInterceptor,
+  ], 1).catch((err) => err);
 
   asserts.assert(res instanceof ExecutionError);
-  asserts.assertEquals(res.message, "dummy error");
   asserts.assertEquals(res.stage, "enter");
-  asserts.assertEquals(res.interceptor, failureInterceptor);
+  asserts.assertEquals(res.message, "dummy error");
+  asserts.assertEquals(res.interceptor, failInterceptor);
 });
 
-Deno.test("interceptor error function", async () => {
-  const failureInterceptor = {
-    name: "failure",
-    leave: (_ctx: Context<NumParam>) => {
-      throw Error("message length is 20");
-    },
-  };
-
-  const shouldBeSkippedInterceptor = {
-    name: "should be skipped",
-    leave: (ctx: Context<NumParam>) => {
-      if (ctx.response == null) return Promise.resolve(ctx);
-      ctx.response["must_not_be_executed"] = 1;
-      return Promise.resolve(ctx);
-    },
-  };
-
-  const errorHandlingInterceptor = {
-    name: "error handling",
-    leave: (ctx: Context<NumParam>) => {
-      ctx.response = { must_not_be_executed: 2 };
-      return Promise.resolve(ctx);
-    },
-    error: (ctx: Context<NumParam>, e: ExecutionError<NumParam>) => {
-      if (ctx.response == null) return Promise.resolve(ctx);
-      ctx.response["should_be_executed"] = (e.stage === "leave")
-        ? e.message.length
-        : -1;
-      return Promise.resolve(ctx);
-    },
-  };
-
-  const successInterceptor = {
-    name: "success",
-    leave: (ctx: Context<NumParam>) => {
-      if (ctx.response == null) return Promise.resolve(ctx);
-      ctx.response["should_be_executed"] =
-        (ctx.response["should_be_executed"] || 0) * 2;
-      return Promise.resolve(ctx);
-    },
-  };
-
-  const res = await sut.execute<NumParam>([
-    successInterceptor,
-    errorHandlingInterceptor,
-    shouldBeSkippedInterceptor,
-    failureInterceptor,
-    dummyHandler,
-  ], { x: 10 });
+Deno.test("execute terminate", async () => {
+  const res = await sut.execute<number>([
+    plusInterceptor,
+    terminateInterceptor,
+    multiInterceptor,
+  ], 1).catch((err) => err);
 
   asserts.assert(!(res instanceof ExecutionError));
-  asserts.assertEquals(res, { y: 15, should_be_executed: 40 });
+  asserts.assertEquals(res, 10010);
+});
+
+Deno.test("execute error handling function", async () => {
+  const res = await sut.execute<number>([
+    plusInterceptor,
+    errorHandlingInterceptor,
+    failInterceptor,
+    multiInterceptor,
+  ], 1).catch((err) => err);
+
+  asserts.assert(!(res instanceof ExecutionError));
+  // 'dummy error'.length + 10 = 21
+  asserts.assertEquals(res, 21);
+});
+
+Deno.test("execute reject", async () => {
+  const res = await sut.execute<number>([
+    plusInterceptor,
+    rejectInterceptor,
+    multiInterceptor,
+  ], 1).catch((err) => err);
+
+  asserts.assert(res instanceof ExecutionError);
+  asserts.assertEquals(res.stage, "leave");
+  asserts.assertEquals(res.message, "dummy reject");
+  asserts.assertEquals(res.interceptor, rejectInterceptor);
 });

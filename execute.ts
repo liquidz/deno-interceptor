@@ -1,115 +1,89 @@
-import {
-  Context,
-  ExecutionError,
-  Handler,
-  Interceptor,
-  Queue,
-} from "./types.ts";
+import { Context, ExecutionError, Interceptor } from "./types.ts";
 
-function setResult<T>(ctx: Context<T>, resp: T | Error): Context<T> {
-  const newContext = ctx;
-  if (resp instanceof Error) {
-    newContext.error = new ExecutionError({
-      stage: "handler",
-      error: resp,
-    });
-  } else {
-    newContext.response = resp;
-  }
-  return newContext;
+export function enqueue<T>(
+  ctx: Context<T>,
+  interceptor: Interceptor<T>,
+): Context<T> {
+  ctx.queue.push(interceptor);
+  return ctx;
 }
 
-function intoQueue<T>(coll: Array<Interceptor<T> | Handler<T>>): Queue<T> {
-  return coll.map((v) => {
-    if (typeof v === "function") {
-      return {
-        name: "__handler__",
-        enter: async (ctx: Context<T>) => {
-          return setResult(ctx, await v(ctx.request));
-        },
-      };
-    } else {
-      return v;
-    }
-  });
+export function terminate<T>(ctx: Context<T>): Context<T> {
+  ctx.queue = [];
+  return ctx;
 }
 
 async function enter<T>(ctx: Context<T>): Promise<Context<T>> {
-  let nextContext = ctx;
-  for (const interceptor of ctx.queue) {
-    if (nextContext.error != null) return nextContext;
+  const interceptor = ctx.queue.shift();
+  if (interceptor == null) return ctx;
+  ctx.stack.unshift(interceptor);
 
-    const enterFn = interceptor.enter;
-    if (enterFn == null) continue;
+  const enterFn = interceptor.enter;
+  if (enterFn == null) return ctx;
 
-    try {
-      nextContext = await enterFn(nextContext);
-    } catch (err) {
-      const e = (err instanceof Error) ? err : Error(`Error ${err}`);
-      nextContext.error = new ExecutionError({
-        stage: "enter",
-        interceptor: interceptor,
-        error: e,
-      });
-    }
+  try {
+    return await enterFn(ctx);
+  } catch (err) {
+    const e = (err instanceof Error) ? err : Error(`Error ${err}`);
+    ctx.error = new ExecutionError({
+      stage: "enter",
+      interceptor: interceptor,
+      error: e,
+    });
+    return ctx;
   }
-  return nextContext;
 }
 
 async function leave<T>(ctx: Context<T>): Promise<Context<T>> {
-  if (ctx.response == null) return ctx;
+  const interceptor = ctx.stack.shift();
+  if (interceptor == null) return ctx;
 
-  let nextContext = ctx;
-  for (const interceptor of ctx.queue.reverse()) {
-    // Error handling with 'error' function
-    if (nextContext.error != null) {
-      const errorFn = interceptor.error;
-      if (errorFn != null) {
-        const e = nextContext.error;
-        nextContext.error = undefined;
-        nextContext = await errorFn(nextContext, e);
-      }
-      continue;
-    }
-
-    const leaveFn = interceptor.leave;
-    if (leaveFn == null) continue;
-
-    try {
-      nextContext = await leaveFn(nextContext);
-    } catch (err) {
-      const e = (err instanceof Error) ? err : Error(`Error ${err}`);
-      nextContext.error = new ExecutionError({
-        stage: "leave",
-        interceptor: interceptor,
-        error: e,
-      });
-    }
+  if (ctx.error != null) {
+    const errorFn = interceptor.error;
+    if (errorFn == null) return ctx;
+    const e = ctx.error;
+    ctx.error = undefined;
+    return await errorFn(ctx, e);
   }
-  return nextContext;
+
+  const leaveFn = interceptor.leave;
+  if (leaveFn == null) return ctx;
+  try {
+    return await leaveFn(ctx);
+  } catch (err) {
+    const e = (err instanceof Error) ? err : Error(`Error ${err}`);
+    ctx.error = new ExecutionError({
+      stage: "leave",
+      interceptor: interceptor,
+      error: e,
+    });
+    return ctx;
+  }
 }
 
-async function executeQueue<T>(queue: Queue<T>, params: T): Promise<T> {
-  const ctx: Context<T> = {
-    queue: queue,
-    request: params,
-  };
-  const entered = await enter(ctx);
-  const left = await leave(entered);
+async function executeContext<T>(ctx: Context<T>): Promise<T> {
+  let current = ctx;
+  while (current.queue.length > 0) {
+    current = await enter(current);
+  }
+  while (current.stack.length > 0) {
+    current = await leave(current);
+  }
 
-  if (left.error != null) {
-    return Promise.reject(left.error);
+  if (current.error != null) {
+    return Promise.reject(current.error);
   }
-  if (left.response == null) {
-    return Promise.reject(Error("no response"));
-  }
-  return left.response;
+  return current.param;
 }
 
-export function execute<T>(
-  coll: Array<Interceptor<T> | Handler<T>>,
-  params: T,
+export async function execute<T>(
+  interceptors: Array<Interceptor<T>>,
+  param: T,
 ): Promise<T> {
-  const queue = intoQueue(coll);
-  return executeQueue(queue, params);
+  const ctx = {
+    queue: interceptors,
+    stack: [],
+    param: param,
+  };
+  return await executeContext(ctx);
 }

@@ -1,4 +1,5 @@
-export type Handler<T> = (req: T) => Promise<T | Error>;
+export type Stage = "enter" | "leave";
+
 export class NotDirectedAcyclicGraphError extends Error {
   constructor(vertexes: Set<string>) {
     super(
@@ -27,9 +28,9 @@ export class ExecutionError<T> extends Error {
 }
 
 export interface Context<T> {
-  queue: Queue<T>;
-  request: T;
-  response?: T;
+  queue: Array<Interceptor<T>>;
+  stack: Array<Interceptor<T>>;
+  param: T;
   error?: ExecutionError<T>;
 }
 
@@ -41,7 +42,3 @@ export interface Interceptor<T> {
   leave?: (ctx: Context<T>) => Promise<Context<T>>;
   error?: (ctx: Context<T>, e: ExecutionError<T>) => Promise<Context<T>>;
 }
-
-export type Queue<T> = Interceptor<T>[];
-
-export type Stage = "enter" | "leave" | "handler";
