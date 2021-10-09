@@ -22,7 +22,7 @@ async function enter<T>(ctx: Context<T>): Promise<Context<T>> {
   if (enterFn == null) return ctx;
 
   try {
-    return await enterFn(ctx);
+    return await enterFn.apply(interceptor, [ctx]);
   } catch (err) {
     const e = (err instanceof Error) ? err : Error(`Error ${err}`);
     ctx.error = new ExecutionError({
@@ -43,13 +43,13 @@ async function leave<T>(ctx: Context<T>): Promise<Context<T>> {
     if (errorFn == null) return ctx;
     const e = ctx.error;
     ctx.error = undefined;
-    return await errorFn(ctx, e);
+    return await errorFn.apply(interceptor, [ctx, e]);
   }
 
   const leaveFn = interceptor.leave;
   if (leaveFn == null) return ctx;
   try {
-    return await leaveFn(ctx);
+    return await leaveFn.apply(interceptor, [ctx]);
   } catch (err) {
     const e = (err instanceof Error) ? err : Error(`Error ${err}`);
     ctx.error = new ExecutionError({
