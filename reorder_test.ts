@@ -1,9 +1,9 @@
 import { asserts } from "./test_deps.ts";
 import * as sut from "./reorder.ts";
-import { Context, Queue } from "./types.ts";
+import { Context, Interceptor } from "./types.ts";
 
 Deno.test("reorder", () => {
-  const dummyQueue: Queue<number> = [
+  const interceptors: Array<Interceptor<number>> = [
     {
       name: "ccc",
       requires: ["aaa", "bbb"],
@@ -26,17 +26,17 @@ Deno.test("reorder", () => {
     },
   ];
 
-  const res = sut.reorder(dummyQueue);
+  const res = sut.reorder(interceptors);
   asserts.assertEquals(res.map((i) => i.name), ["aaa", "bbb", "ccc"]);
 });
 
 Deno.test("emtpy", () => {
-  const empty: Queue<number> = [];
+  const empty: Array<Interceptor<number>> = [];
   asserts.assertEquals(sut.reorder(empty), []);
 });
 
 Deno.test("no requires", () => {
-  const dummyQueue: Queue<number> = [
+  const interceptors: Array<Interceptor<number>> = [
     {
       name: "aaa",
       enter: (c: Context<number>) => {
@@ -56,12 +56,12 @@ Deno.test("no requires", () => {
       },
     },
   ];
-  const res = sut.reorder(dummyQueue);
+  const res = sut.reorder(interceptors);
   asserts.assertEquals(res.map((i) => i.name), ["aaa", "bbb", "ccc"]);
 });
 
 Deno.test("empty requires", () => {
-  const dummyQueue: Queue<number> = [
+  const interceptors: Array<Interceptor<number>> = [
     {
       name: "aaa",
       requires: [],
@@ -84,12 +84,12 @@ Deno.test("empty requires", () => {
       },
     },
   ];
-  const res = sut.reorder(dummyQueue);
+  const res = sut.reorder(interceptors);
   asserts.assertEquals(res.map((i) => i.name), ["aaa", "bbb", "ccc"]);
 });
 
 Deno.test("require others", () => {
-  const dummyQueue: Queue<number> = [
+  const interceptors: Array<Interceptor<number>> = [
     {
       name: "ccc",
       requireOthers: true,
@@ -112,24 +112,6 @@ Deno.test("require others", () => {
     },
   ];
 
-  const res = sut.reorder(dummyQueue);
+  const res = sut.reorder(interceptors);
   asserts.assertEquals(res.map((i) => i.name), ["aaa", "bbb", "ccc"]);
 });
-
-// class Foo implements Interceptor<number> {
-//   name: string;
-//   requires?: string[];
-//
-//   constructor(name: string, req: string[]) {
-//     this.name = name;
-//     this.requires = req;
-//   }
-// }
-//
-// console.log(
-//   sut.reorder<Foo>([
-//     new Foo("c", ["b"]),
-//     new Foo("a", []),
-//     new Foo("b", ["a"]),
-//   ]),
-// );

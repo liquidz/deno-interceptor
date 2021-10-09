@@ -1,42 +1,34 @@
 import { Interceptor } from "./types.ts";
-import { KahnGraph } from "./deps.ts";
+import * as toposort from "./toposort.ts";
 
 //deno-lint-ignore no-explicit-any
 export function reorder<T extends Interceptor<any>>(
   interceptors: Array<T>,
 ): Array<T> {
-  const idToInterceptor: Record<string, T> = {};
-  for (let i = 0; i < interceptors.length; ++i) {
-    idToInterceptor[i.toString()] = interceptors[i];
-  }
+  const nameToInterceptor = interceptors.reduce((res, interceptor) => {
+    res[interceptor.name] = interceptor;
+    return res;
+  }, {} as Record<string, T>);
 
-  const nameToId: Record<string, string> = {};
-  for (const id in idToInterceptor) {
-    nameToId[idToInterceptor[id].name] = id;
-  }
-
-  const graph = new KahnGraph();
-  for (const id in idToInterceptor) {
-    const interceptor = idToInterceptor[id];
+  const graphMap = interceptors.reduce((res, interceptor) => {
+    const name = interceptor.name;
+    const depends = res[name] ?? new Set<string>();
 
     if (interceptor.requireOthers) {
       for (const i of interceptors) {
-        const fromId = nameToId[i.name];
-        if (fromId == null || fromId === id) continue;
-        graph.addEdge({ id: fromId }, { id: id });
+        if (i.name === name) continue;
+        depends.add(i.name);
       }
-    } else if (
-      interceptor.requires != null && interceptor.requires.length > 0
-    ) {
-      for (const name of interceptor.requires) {
-        const fromId = nameToId[name];
-        if (fromId == null) continue;
-        graph.addEdge({ id: fromId }, { id: id });
-      }
+      res[name] = depends;
     } else {
-      graph.addNode({ id: id });
+      for (const v of interceptor.requires ?? []) depends.add(v);
+      res[name] = depends;
     }
-  }
+    return res;
+  }, {} as toposort.GraphMap);
 
-  return graph.sort().map((v) => idToInterceptor[v.id]);
+  return toposort
+    .sort(graphMap)
+    .map((name) => nameToInterceptor[name])
+    .reverse();
 }
