@@ -7,11 +7,11 @@ type TestContext = Context<number>;
 const plusInterceptor = {
   name: "plus",
   enter: (ctx: TestContext) => {
-    ctx.param += 1;
+    ctx.arg += 1;
     return Promise.resolve(ctx);
   },
   leave: (ctx: TestContext) => {
-    ctx.param += 10;
+    ctx.arg += 10;
     return Promise.resolve(ctx);
   },
 };
@@ -19,11 +19,11 @@ const plusInterceptor = {
 const multiInterceptor = {
   name: "multi",
   enter: (ctx: TestContext) => {
-    ctx.param = ctx.param * 2;
+    ctx.arg = ctx.arg * 2;
     return Promise.resolve(ctx);
   },
   leave: (ctx: TestContext) => {
-    ctx.param = ctx.param * 20;
+    ctx.arg = ctx.arg * 20;
     return Promise.resolve(ctx);
   },
 };
@@ -45,7 +45,7 @@ const rejectInterceptor = {
 const terminateInterceptor = {
   name: "terminate",
   enter: (ctx: TestContext) => {
-    ctx.param = 10000;
+    ctx.arg = 10000;
     return Promise.resolve(sut.terminate(ctx));
   },
 };
@@ -56,7 +56,7 @@ const errorHandlingInterceptor = {
     throw Error("should not be called");
   },
   error: (ctx: TestContext, e: ExecutionError<number>) => {
-    ctx.param = (e.stage === "enter") ? e.message.length : -1;
+    ctx.arg = (e.stage === "enter") ? e.message.length : -1;
     return Promise.resolve(ctx);
   },
 };

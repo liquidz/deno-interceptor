@@ -73,17 +73,17 @@ async function executeContext<T>(ctx: Context<T>): Promise<T> {
   if (current.error != null) {
     return Promise.reject(current.error);
   }
-  return current.param;
+  return current.arg;
 }
 
 export async function execute<T>(
   interceptors: Array<Interceptor<T>>,
-  param: T,
+  arg: T,
 ): Promise<T> {
   const ctx = {
     queue: interceptors,
     stack: [],
-    param: param,
+    arg: arg,
   };
   return await executeContext(ctx);
 }

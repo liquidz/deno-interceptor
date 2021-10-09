@@ -30,7 +30,7 @@ export class ExecutionError<T> extends Error {
 export interface Context<T> {
   queue: Array<Interceptor<T>>;
   stack: Array<Interceptor<T>>;
-  param: T;
+  arg: T;
   error?: ExecutionError<T>;
 }
 
