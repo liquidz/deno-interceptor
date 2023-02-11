@@ -27,12 +27,12 @@ export class ExecutionError<T> extends Error {
   }
 }
 
-export interface Context<T> {
-  queue: Array<Interceptor<T>>;
-  stack: Array<Interceptor<T>>;
+export type Context<T> = {
+  queue: Interceptor<T>[];
+  stack: Interceptor<T>[];
   arg: T;
   error?: ExecutionError<T>;
-}
+};
 
 export interface Interceptor<T> {
   name: string;
