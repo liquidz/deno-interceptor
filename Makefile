@@ -7,11 +7,11 @@ lint:
 	deno fmt --check *.ts
 	deno lint --unstable
 
-.PHONY: update
+.PHONY: outdated
 # https://github.com/hayd/deno-udd
 # deno install -A -f -n udd https://deno.land/x/udd@0.4.0/main.ts
-update:
-	udd deps.ts
+outdated:
+	udd test_deps.ts
 
 .PHONY: test-install
 # https://github.com/kuuote/deno-cache-injector
