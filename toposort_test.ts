@@ -2,7 +2,7 @@ import { asserts } from "./test_deps.ts";
 import { NotDirectedAcyclicGraphError } from "./types.ts";
 import * as sut from "./toposort.ts";
 
-function sset(...arr: Array<string>): Set<string> {
+function sset(...arr: string[]): Set<string> {
   return new Set<string>(arr);
 }
 

@@ -3,7 +3,7 @@ import * as sut from "./reorder.ts";
 import { Context, Interceptor } from "./types.ts";
 
 Deno.test("reorder", () => {
-  const interceptors: Array<Interceptor<number>> = [
+  const interceptors: Interceptor<number>[] = [
     {
       name: "ccc",
       requires: ["aaa", "bbb"],
@@ -31,12 +31,12 @@ Deno.test("reorder", () => {
 });
 
 Deno.test("emtpy", () => {
-  const empty: Array<Interceptor<number>> = [];
+  const empty: Interceptor<number>[] = [];
   asserts.assertEquals(sut.reorder(empty), []);
 });
 
 Deno.test("no requires", () => {
-  const interceptors: Array<Interceptor<number>> = [
+  const interceptors: Interceptor<number>[] = [
     {
       name: "aaa",
       enter: (c: Context<number>) => {
@@ -61,7 +61,7 @@ Deno.test("no requires", () => {
 });
 
 Deno.test("empty requires", () => {
-  const interceptors: Array<Interceptor<number>> = [
+  const interceptors: Interceptor<number>[] = [
     {
       name: "aaa",
       requires: [],
@@ -89,7 +89,7 @@ Deno.test("empty requires", () => {
 });
 
 Deno.test("require others", () => {
-  const interceptors: Array<Interceptor<number>> = [
+  const interceptors: Interceptor<number>[] = [
     {
       name: "ccc",
       requireOthers: true,

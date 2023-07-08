@@ -3,8 +3,8 @@ import * as toposort from "./toposort.ts";
 
 //deno-lint-ignore no-explicit-any
 export function reorder<T extends Interceptor<any>>(
-  interceptors: Array<T>,
-): Array<T> {
+  interceptors: T[],
+): T[] {
   const nameToInterceptor = interceptors.reduce((res, interceptor) => {
     res[interceptor.name] = interceptor;
     return res;

@@ -24,7 +24,7 @@ async function enter<T>(ctx: Context<T>): Promise<Context<T>> {
   try {
     return await enterFn.apply(interceptor, [ctx]);
   } catch (err) {
-    const e = (err instanceof Error) ? err : Error(`Error ${err}`);
+    const e = err instanceof Error ? err : Error(`Error ${err}`);
     ctx.error = new ExecutionError({
       stage: "enter",
       interceptor: interceptor,
@@ -51,7 +51,7 @@ async function leave<T>(ctx: Context<T>): Promise<Context<T>> {
   try {
     return await leaveFn.apply(interceptor, [ctx]);
   } catch (err) {
-    const e = (err instanceof Error) ? err : Error(`Error ${err}`);
+    const e = err instanceof Error ? err : Error(`Error ${err}`);
     ctx.error = new ExecutionError({
       stage: "leave",
       interceptor: interceptor,
@@ -77,7 +77,7 @@ async function executeContext<T>(ctx: Context<T>): Promise<T> {
 }
 
 export async function execute<T>(
-  interceptors: Array<Interceptor<T>>,
+  interceptors: Interceptor<T>[],
   arg: T,
 ): Promise<T> {
   const ctx = {
