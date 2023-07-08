@@ -11,7 +11,6 @@ TODO
 
 == License
 
-Copyright (c) 2021 http://twitter.com/uochan[Masashi Iizuka]
+Copyright (c) 2021-2023 http://twitter.com/uochan[Masashi Iizuka]
 
 Distributed under the MIT License.
-
