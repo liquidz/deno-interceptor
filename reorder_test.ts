@@ -3,24 +3,24 @@ import * as sut from "./reorder.ts";
 import { Context, Interceptor } from "./types.ts";
 
 Deno.test("reorder", () => {
-  const interceptors: Interceptor<number>[] = [
+  const interceptors: Interceptor[] = [
     {
       name: "ccc",
-      requires: ["aaa", "bbb"],
-      enter: (c: Context<number>) => {
+      depends: ["aaa", "bbb"],
+      enter: (c: Context) => {
         return Promise.resolve(c);
       },
     },
     {
       name: "bbb",
-      requires: ["aaa"],
-      enter: (c: Context<number>) => {
+      depends: ["aaa"],
+      enter: (c: Context) => {
         return Promise.resolve(c);
       },
     },
     {
       name: "aaa",
-      enter: (c: Context<number>) => {
+      enter: (c: Context) => {
         return Promise.resolve(c);
       },
     },
@@ -31,27 +31,27 @@ Deno.test("reorder", () => {
 });
 
 Deno.test("emtpy", () => {
-  const empty: Interceptor<number>[] = [];
+  const empty: Interceptor[] = [];
   asserts.assertEquals(sut.reorder(empty), []);
 });
 
-Deno.test("no requires", () => {
-  const interceptors: Interceptor<number>[] = [
+Deno.test("no dependencies", () => {
+  const interceptors: Interceptor[] = [
     {
       name: "aaa",
-      enter: (c: Context<number>) => {
+      enter: (c: Context) => {
         return Promise.resolve(c);
       },
     },
     {
       name: "bbb",
-      enter: (c: Context<number>) => {
+      enter: (c: Context) => {
         return Promise.resolve(c);
       },
     },
     {
       name: "ccc",
-      enter: (c: Context<number>) => {
+      enter: (c: Context) => {
         return Promise.resolve(c);
       },
     },
@@ -60,26 +60,26 @@ Deno.test("no requires", () => {
   asserts.assertEquals(res.map((i) => i.name), ["aaa", "bbb", "ccc"]);
 });
 
-Deno.test("empty requires", () => {
-  const interceptors: Interceptor<number>[] = [
+Deno.test("empty dependencies", () => {
+  const interceptors: Interceptor[] = [
     {
       name: "aaa",
-      requires: [],
-      enter: (c: Context<number>) => {
+      depends: [],
+      enter: (c: Context) => {
         return Promise.resolve(c);
       },
     },
     {
       name: "bbb",
-      requires: [],
-      enter: (c: Context<number>) => {
+      depends: [],
+      enter: (c: Context) => {
         return Promise.resolve(c);
       },
     },
     {
       name: "ccc",
-      requires: [],
-      enter: (c: Context<number>) => {
+      depends: [],
+      enter: (c: Context) => {
         return Promise.resolve(c);
       },
     },
@@ -88,25 +88,25 @@ Deno.test("empty requires", () => {
   asserts.assertEquals(res.map((i) => i.name), ["aaa", "bbb", "ccc"]);
 });
 
-Deno.test("require others", () => {
-  const interceptors: Interceptor<number>[] = [
+Deno.test("shoud be last", () => {
+  const interceptors: Interceptor[] = [
     {
       name: "ccc",
-      requireOthers: true,
-      enter: (c: Context<number>) => {
+      shouldBeLast: true,
+      enter: (c: Context) => {
         return Promise.resolve(c);
       },
     },
     {
       name: "bbb",
-      requires: ["aaa"],
-      enter: (c: Context<number>) => {
+      depends: ["aaa"],
+      enter: (c: Context) => {
         return Promise.resolve(c);
       },
     },
     {
       name: "aaa",
-      enter: (c: Context<number>) => {
+      enter: (c: Context) => {
         return Promise.resolve(c);
       },
     },
@@ -114,4 +114,34 @@ Deno.test("require others", () => {
 
   const res = sut.reorder(interceptors);
   asserts.assertEquals(res.map((i) => i.name), ["aaa", "bbb", "ccc"]);
+});
+
+Deno.test("multiple shoud be last", () => {
+  const interceptors: Interceptor[] = [
+    {
+      name: "ccc",
+      shouldBeLast: true,
+      enter: (c: Context) => {
+        return Promise.resolve(c);
+      },
+    },
+    {
+      name: "bbb",
+      shouldBeLast: true,
+      enter: (c: Context) => {
+        return Promise.resolve(c);
+      },
+    },
+    {
+      name: "aaa",
+      enter: (c: Context) => {
+        return Promise.resolve(c);
+      },
+    },
+  ];
+
+  asserts.assertThrows(
+    () => sut.reorder(interceptors),
+    "Not a directed acyclic graph",
+  );
 });

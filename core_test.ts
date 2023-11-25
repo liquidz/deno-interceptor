@@ -1,68 +1,70 @@
 import { asserts } from "./test_deps.ts";
-import * as sut from "./execute.ts";
+import * as sut from "./core.ts";
 import { Context, ExecutionError } from "./types.ts";
 
-type TestContext = Context<number>;
+type TestContext = Context<number, number>;
 
 const plusInterceptor = {
   name: "plus",
-  enter: (ctx: TestContext) => {
-    ctx.arg += 1;
-    return Promise.resolve(ctx);
+  enter: (context: TestContext) => {
+    context.response = (context.response ?? context.request) + 1;
+
+    return Promise.resolve(context);
   },
-  leave: (ctx: TestContext) => {
-    ctx.arg += 10;
-    return Promise.resolve(ctx);
+  leave: (context: TestContext) => {
+    context.response = (context.response ?? 0) + 10;
+    return Promise.resolve(context);
   },
 };
 
 const multiInterceptor = {
   name: "multi",
-  enter: (ctx: TestContext) => {
-    ctx.arg = ctx.arg * 2;
-    return Promise.resolve(ctx);
+  enter: (context: TestContext) => {
+    context.response = (context.response ?? context.request) * 2;
+    return Promise.resolve(context);
   },
-  leave: (ctx: TestContext) => {
-    ctx.arg = ctx.arg * 20;
-    return Promise.resolve(ctx);
+  leave: (context: TestContext) => {
+    context.response = (context.response ?? 0) * 20;
+    return Promise.resolve(context);
   },
 };
 
 const failInterceptor = {
   name: "failure",
-  enter: (_ctx: TestContext) => {
+  enter: (_context: TestContext) => {
     throw Error("dummy error");
   },
 };
 
 const rejectInterceptor = {
   name: "failure",
-  leave: (_ctx: TestContext) => {
+  leave: (_context: TestContext) => {
     return Promise.reject(Error("dummy reject"));
   },
 };
 
 const terminateInterceptor = {
   name: "terminate",
-  enter: (ctx: TestContext) => {
-    ctx.arg = 10000;
-    return Promise.resolve(sut.terminate(ctx));
+  enter: (context: TestContext) => {
+    console.log("terminate enter");
+    context.response = 10000;
+    return Promise.resolve(sut.terminate(context));
   },
 };
 
 const errorHandlingInterceptor = {
   name: "error handling",
-  leave: (_ctx: TestContext) => {
+  leave: (_context: TestContext) => {
     throw Error("should not be called");
   },
-  error: (ctx: TestContext, e: ExecutionError<number>) => {
-    ctx.arg = (e.stage === "enter") ? e.message.length : -1;
-    return Promise.resolve(ctx);
+  error: (context: TestContext, e: ExecutionError<number, number>) => {
+    context.response = (e.stage === "enter") ? e.message.length : -1;
+    return Promise.resolve(context);
   },
 };
 
 Deno.test("execute", async () => {
-  const res = await sut.execute<number>([
+  const res = await sut.execute<number, number>([
     plusInterceptor,
     multiInterceptor,
   ], 1).catch((err) => err);
@@ -72,7 +74,7 @@ Deno.test("execute", async () => {
 });
 
 Deno.test("execute error", async () => {
-  const res = await sut.execute<number>([
+  const res = await sut.execute<number, number>([
     plusInterceptor,
     failInterceptor,
     multiInterceptor,
@@ -85,7 +87,7 @@ Deno.test("execute error", async () => {
 });
 
 Deno.test("execute terminate", async () => {
-  const res = await sut.execute<number>([
+  const res = await sut.execute<number, number>([
     plusInterceptor,
     terminateInterceptor,
     multiInterceptor,
@@ -96,7 +98,7 @@ Deno.test("execute terminate", async () => {
 });
 
 Deno.test("execute error handling function", async () => {
-  const res = await sut.execute<number>([
+  const res = await sut.execute<number, number>([
     plusInterceptor,
     errorHandlingInterceptor,
     failInterceptor,
@@ -109,7 +111,7 @@ Deno.test("execute error handling function", async () => {
 });
 
 Deno.test("execute reject", async () => {
-  const res = await sut.execute<number>([
+  const res = await sut.execute<number, number>([
     plusInterceptor,
     rejectInterceptor,
     multiInterceptor,

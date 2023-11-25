@@ -1,30 +1,34 @@
 import { Interceptor } from "./types.ts";
 import * as toposort from "./toposort.ts";
 
-//deno-lint-ignore no-explicit-any
-export function reorder<T extends Interceptor<any>>(
+export function reorder<T extends Interceptor>(
   interceptors: T[],
 ): T[] {
-  const nameToInterceptor = interceptors.reduce((res, interceptor) => {
-    res[interceptor.name] = interceptor;
-    return res;
+  const nameToInterceptor = interceptors.reduce((accm, interceptor) => {
+    accm[interceptor.name] = interceptor;
+    return accm;
   }, {} as Record<string, T>);
 
-  const graphMap = interceptors.reduce((res, interceptor) => {
-    const name = interceptor.name;
-    const depends = res[name] ?? new Set<string>();
+  // // TODO: check if there are multiple interceptors with shouldBeLast
+  // if (interceptors.filter((i) => i.shouldBeLast).length > 1) {
+  //
+  // }
 
-    if (interceptor.requireOthers) {
+  const graphMap = interceptors.reduce((accm, interceptor) => {
+    const name = interceptor.name;
+    const depends = accm[name] ?? new Set<string>();
+
+    if (interceptor.shouldBeLast) {
       for (const i of interceptors) {
         if (i.name === name) continue;
         depends.add(i.name);
       }
-      res[name] = depends;
+      accm[name] = depends;
     } else {
-      for (const v of interceptor.requires ?? []) depends.add(v);
-      res[name] = depends;
+      for (const v of interceptor.depends ?? []) depends.add(v);
+      accm[name] = depends;
     }
-    return res;
+    return accm;
   }, {} as toposort.GraphMap);
 
   return toposort

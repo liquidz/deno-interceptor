@@ -8,14 +8,14 @@ export class NotDirectedAcyclicGraphError extends Error {
   }
 }
 
-export class ExecutionError<T> extends Error {
+export class ExecutionError<T = unknown, U = unknown> extends Error {
   readonly stage: Stage;
-  readonly interceptor: Interceptor<T> | undefined;
+  readonly interceptor: Interceptor<T, U> | undefined;
   constructor(
     { error, stage, interceptor }: {
       error: Error;
       stage: Stage;
-      interceptor?: Interceptor<T>;
+      interceptor?: Interceptor<T, U>;
     },
   ) {
     super(error.message);
@@ -27,18 +27,24 @@ export class ExecutionError<T> extends Error {
   }
 }
 
-export type Context<T> = {
-  queue: Interceptor<T>[];
-  stack: Interceptor<T>[];
-  arg: T;
-  error?: ExecutionError<T>;
+export type Context<T = unknown, U = unknown> = {
+  request: T;
+  response?: U;
+  error?: ExecutionError<T, U>;
+
+  _queue: Interceptor<T, U>[];
+  _stack: Interceptor<T, U>[];
 };
 
-export interface Interceptor<T> {
+export interface Interceptor<T = unknown, U = unknown> {
   name: string;
-  requires?: string[];
-  requireOthers?: boolean;
-  enter?: (ctx: Context<T>) => Promise<Context<T>>;
-  leave?: (ctx: Context<T>) => Promise<Context<T>>;
-  error?: (ctx: Context<T>, e: ExecutionError<T>) => Promise<Context<T>>;
+  enter?: (ctx: Context<T, U>) => Promise<Context<T, U>>;
+  leave?: (ctx: Context<T, U>) => Promise<Context<T, U>>;
+  error?: (
+    ctx: Context<T, U>,
+    e: ExecutionError<T, U>,
+  ) => Promise<Context<T, U>>;
+
+  depends?: string[];
+  shouldBeLast?: boolean;
 }
